@@ -1,0 +1,34 @@
+- JOGO
+-parte 1 : inicializar o jogo
+-requisitos:
+-- usuario deve passar o caminho dos arquivos
+--- se usuario nao passar caminho : exibe mensagem de erro. Finaliza programa
+--- se usuario passar caminho dos arquivos:
+---- se tem mais de 1000 caracteres? exibe mensagem de erro. Finaliza programa
+---- se tem ate 1000 caracteres? inicia programa corretamente
+--- encontrar arquivo "config_inicial.txt"
+---- se arquivo nao encontrado? exibe mensagem de erro
+--- encontrar arquivo "personagem.txt"
+---- se arquivo nao econtrado: exibe mensagem de erro
+--- ler arquivos e preparar ambiente do jogo
+---- se nao conseguir ler os arquivos: exibe mensagem de erro e finaliza programa
+
+PERGUNTAS:
+- como pegar um argumento em c
+- como eu salvo um argumento em uma variavel em c argv[1]
+- como usar o exit em c
+- como saber quantos caracteres uma string tem em c
+- como eu verifico o comprimento do argv1
+- como eu carrego um arquivo txt em c
+- fopen em c exemplos
+- como combinar duas variaveis char[]
+
+- inicializar o jogo
+- gerar o arquivo "inicializacao.txt"
+-- conter o desenho do estado inicial do jogo com as config fornecidas
+- eu recebo o numero de colunas e de pistas
+-- cada linha = pistas*3 - 1
+-- desenhar a borda: 4 arestas
+--- largura= pistas*3 +1
+--- comprimento= colunas
+
