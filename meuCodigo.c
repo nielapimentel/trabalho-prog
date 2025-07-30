@@ -36,7 +36,7 @@ int main(int argc, char *argv[]){
   strcpy(diretorio_config_inicial, diretorio);
   
   strcat(diretorio_config_inicial, arquivoDeTexto); //caminho+config_inicial.txt
-  printf("%s\n", diretorio_config_inicial);
+  printf("\n%s\n", diretorio_config_inicial);
   
   fp = fopen(diretorio_config_inicial, "r");
   if (fp == NULL) {
@@ -47,6 +47,7 @@ int main(int argc, char *argv[]){
   while (fgets(buffer, sizeof(buffer), fp) != NULL) { //le o arquivo ate ficar NULL
     printf("%s", buffer); // Imprime a linha
   }
+  printf ("\n");
   fclose(fp);
 
   //separando as vriaveis que vamos usar no futuro
@@ -62,7 +63,7 @@ int main(int argc, char *argv[]){
   strcpy(diretorio_personagens, diretorio);
   
   strcat(diretorio_personagens, arquivoDePersonagem);
-  printf ("%s\n", diretorio_personagens);
+  printf ("\n%s\n", diretorio_personagens);
   
   person = fopen(diretorio_personagens, "r");
   if (person == NULL) {
@@ -73,6 +74,7 @@ int main(int argc, char *argv[]){
   while (fgets(buffer, sizeof(buffer), person) != NULL) {
     printf("%s", buffer); // Imprime a linha
   }
+  printf ("\n");
   fclose(person);
 
   //FILE *inicializacao;
