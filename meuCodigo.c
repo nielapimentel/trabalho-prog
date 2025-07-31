@@ -2,28 +2,48 @@
 #include <stdlib.h>
 #include <string.h>
 
-int main(int argc, char *argv[]){
+typedef struct {
+  int vida;
+  int posX;
+  int pista;
+  char forma[2][3];
+} tGalinha;
+
+typedef struct {
+  char direcao;
+  int velocidade;
+  int posX;
+  int pista;
+  int endereco;
+  char forma[2][3];
+} tCarro;
+
+typedef struct {
+  int alturaMax;
+  int morteMax;
+  int morteMin;
+  int movTotais;
+  int movOpostos;
+} tEstatistica;
+
+void VerificaQtdArgum (int argc);
+void LeArquivos(char argv[], int tam, char diretorio[]);
+void VerificaArgum ( int comprimento);
+
+
+int main(int argc, char * argv[]){
   printf ("iniciando o jogo\n");
   
-  if (argc==1) {
-    printf ("ERRO: Informe o diretorio com os arquivos de configuracao.\n");
-    exit(1); // falta o diretorio
-  }
+  VerificaArgum (argc);
   
-  printf ("argc: %d\n", argc);
-  printf("Argumento: %s\n", argv[1]);
+  //printf ("argc: %d\n", argc);
+  //printf("Argumento: %s\n", argv[1]);
+  
   char diretorio[1100]; // verificar erro de mais de 1000 carac
+
+  LeArquivos(argv[1], 1100, diretorio);
   
-  int comprimento= strlen(argv[1]);
-  printf ("comprimento: %d\n", comprimento);
-  
-  if (comprimento>1000){
-    printf ("ERRO: Informe um caminho com no maximo 1000 caracteres.\n");
-    exit(1);
-  }
-  
-  strcpy(diretorio, argv[1]);
-  printf ("diretorio: %s\n", diretorio);
+  //printf ("diretorio: %s\n", diretorio);
   
   
   
@@ -82,4 +102,26 @@ int main(int argc, char *argv[]){
   
   
   printf ("finalizando o jogo\n");
+}
+
+void VerificaQtdArgum (int argc){
+  if (argc==1) {
+    printf ("ERRO: Informe o diretorio com os arquivos de configuracao.\n");
+    exit(1); // falta o diretorio
+  }
+}
+void LeArquivos(char argv[], int tam, char diretorio[]){
+  int comprimento = strlen(argv);
+  VerificaArgum(comprimento);
+  strcpy(diretorio, argv);
+
+  //printf("comprimento: %d\n", comprimento);
+  //printf("diretorio: %s\n", diretorio);
+}
+
+void VerificaArgum(int comprimento){
+  if (comprimento > 1000){
+    printf("ERRO: Informe um caminho com no maximo 1000 caracteres.\n");
+    exit(1);
+  }
 }
