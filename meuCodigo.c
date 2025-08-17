@@ -35,6 +35,14 @@ typedef struct {
 } tJogada;
 
 typedef struct {
+  int iteracao;
+  int pista;
+  int carro;
+  int x; //pos central
+  int y; //pos superior
+} tMorte;
+
+typedef struct {
   tPista pista[12];
   int qtdPista;
   int largura;
@@ -46,6 +54,8 @@ typedef struct {
   //tCarro carro[12][10];
   //int numCarro[10];
   tGalinha galinha;
+  tMorte morte[20]; //max de vidas - max de mortes
+  int qtdMortes;
 } tJogo;
 
 typedef struct {
@@ -58,12 +68,13 @@ typedef struct {
 
 
 
+
 //tJogo LeArquivos(char argv[], int tam, char diretorio[]);
 
 //funcoes da main
 tJogo InicializarJogo(int argc, char * argv[]); //feito
 tJogo ReailizarJogo (tJogo jogo, char * argv[]);
-//void GerarResumo (tJogo jogo);
+void GerarResumo (tJogo jogo, char * argv[]);
 //void GerarEstatisticas (tJogo jogo);
 //void GerarRanking (tJogo jogo);
 //void GerarMapaDeCalor (tJogo jogo);
@@ -75,7 +86,7 @@ int main(int argc, char * argv[]){
   jogao = InicializarJogo(argc, argv); 
   jogao = ReailizarJogo(jogao, argv);
   
-  //GerarResumo(jogao);
+  GerarResumo(jogao, argv);
   //GerarEstatisticas (jogao);
   //GerarRanking (jogao);
   //GerarMapaDeCalor (jogao);
@@ -145,7 +156,6 @@ void VerificaQtdArgum (int argc){
     exit(1); // falta o diretorio
   }
 }
-
 void VerificaArgum(char * argv[], int tamMax){
   int comprimento;
   char diretorio[1001];
@@ -156,7 +166,6 @@ void VerificaArgum(char * argv[], int tamMax){
     exit(1);
   }
 }
-
 tJogo LeArquivos(char * argv[]){
   char diretorio_config[1021]; //ja com espaco pro \0
   char diretorio_person[1018]; //ja com espaco pro \0
@@ -239,13 +248,15 @@ tJogo LeArquivos(char * argv[]){
 
   return jogo;
 }
-
 void GerarArqIni (tJogo jogo, char * argv[]){
 
-  strcat (argv[1],"saida/inicializacao.txt");
+  char diretorio[1000];
+  strcpy (diretorio, argv[1]);
+
+  strcat (diretorio,"/saida/inicializacao.txt");
   //printf ("%s", argv[1]);
 
-  FILE *inicia = fopen(argv[1], "w");
+  FILE *inicia = fopen(diretorio, "w");
   if (inicia==NULL) {
     printf ("Erro: pasta 'saida' nao existe!"); //no documento disse que ela ja esta criada, so pra garantir
     exit(1);
@@ -259,7 +270,6 @@ void GerarArqIni (tJogo jogo, char * argv[]){
   fprintf (inicia, "A posicao central da galinha iniciara em (%d %d).", jogo.galinha.posX, jogo.qtdPista*3-2);
   fclose (inicia);
 }
-
 void ImprimeMapaArq (FILE * arq, tJogo jogo){
   int i,j,k;
 
@@ -270,7 +280,6 @@ void ImprimeMapaArq (FILE * arq, tJogo jogo){
 
   ImprimeUltimaPistaArq (arq, jogo);
 }
-
 void ImprimeUltimaPistaArq (FILE * arq, tJogo jogo){
   int i,j;
   char linha1[101]={0};
@@ -296,7 +305,6 @@ void ImprimeUltimaPistaArq (FILE * arq, tJogo jogo){
   fprintf(arq, "|%s|\n", linha2);
   ImprimeTopoArq(arq, jogo);
 }
-
 void ImprimeTopoArq( FILE * arq, tJogo jogo) {
   int i,j;
 
@@ -306,7 +314,6 @@ void ImprimeTopoArq( FILE * arq, tJogo jogo) {
   }
   fprintf(arq, "|\n");
 }
-
 void ImprimePistaArq (FILE * arq, tJogo jogo, tPista pista) {
   int i,j;
   char linha1[101]={0};
@@ -323,13 +330,13 @@ void ImprimePistaArq (FILE * arq, tJogo jogo, tPista pista) {
   //alocando carros na pista
   for (i=0; i<pista.qtdCarros; i++){
     j= pista.carros[i].posX -1;
-    linha1[j-1]= jogo.formaCarro[0][0];
-    linha1[j]= jogo.formaCarro[0][1];
-    linha1[j+1]= jogo.formaCarro[0][2];
+    linha1[(j-1+jogo.largura)%jogo.largura]= jogo.formaCarro[0][0];
+    linha1[(j+jogo.largura)%jogo.largura]= jogo.formaCarro[0][1];
+    linha1[(j+1+jogo.largura)%jogo.largura]= jogo.formaCarro[0][2];
 
-    linha2[j-1]= jogo.formaCarro[1][0];
-    linha2[j]= jogo.formaCarro[1][1];
-    linha2[j+1]= jogo.formaCarro[1][2];
+    linha2[(j-1+jogo.largura)%jogo.largura]= jogo.formaCarro[1][0];
+    linha2[(j+jogo.largura)%jogo.largura]= jogo.formaCarro[1][1];
+    linha2[(j+1+jogo.largura)%jogo.largura]= jogo.formaCarro[1][2];
   }
 
   fprintf(arq, "|%s|\n", linha1);
@@ -337,7 +344,6 @@ void ImprimePistaArq (FILE * arq, tJogo jogo, tPista pista) {
   ImprimeDivisaoArq(arq, jogo);
 
 }
-
 void ImprimeDivisaoArq (FILE * arq, tJogo jogo){
   int i,j;
 
@@ -355,17 +361,13 @@ void ImprimeDivisaoArq (FILE * arq, tJogo jogo){
   fprintf (arq, "|\n");
 }
 
-
-
-
 //funcoes do RealizarJogo
 int GalinhaGanhou (tJogo jogo); // retorna 1 se ganhou
 int GalinhaDerrotada (tJogo jogo); //perdeu todas as vidas - retora 1
-int LeJogada ();
+char LeJogada ();
 tJogo MoveGalinha (tJogo jogo, tJogada jogada); // adiciona 1 ponto se for w
 tJogo MovimentaCarros (tJogo jogo); 
 int VerificaColisao (tJogo jogo); //passar pela matriz de carros e ver se algum x e y bate com o da galinha
-
 void ImprimeJogo (tJogo jogo);
 void ImprimeMapa (tJogo jogo);
 void ImprimeTopo (tJogo jogo);
@@ -379,9 +381,11 @@ tJogo ReailizarJogo (tJogo jogo, char * argv[]){
   //chegando no topo do mapa, ou quando perder todas as vidas.
   jogo.iteracao=0;
   jogo.pontuacao=0;
+  jogo.qtdMortes=0;
 
   jogo.galinha.pista=jogo.qtdPista-1; //galinha na ultima pista
   char lixo; //consome \n
+  int countMortes;
 
   //ImprimeJogo(jogo);
 
@@ -396,16 +400,25 @@ tJogo ReailizarJogo (tJogo jogo, char * argv[]){
       break;
     } else { //galinha NAO derrotada NEM vitoriosa
       ImprimeJogo(jogo);
-      //jogo.jogada.digitada= LeJogada();
-      scanf ("%c", &jogo.jogada.digitada);
+      jogo.jogada.digitada= LeJogada();
+      //scanf ("%c", &jogo.jogada.digitada);
       //printf ("%c", jogo.jogada.digitada);
-      scanf("%c", &lixo);
+      //scanf("%c", &lixo);
       jogo= MoveGalinha (jogo, jogo.jogada); // adiciona 1 ponto se for pra frente
       jogo= MovimentaCarros (jogo);
+
       if (VerificaColisao(jogo)) { // 1==colidiu
+        //alocando dados pro tmorte;
+        jogo.morte[jogo.qtdMortes].iteracao= jogo.iteracao+1; // qtdMortes==0
+        //jogo.morte[jogo.qtdMortes].pista= jogo.galinha.pista; //se colidiu a pista da galinha foi onde ocorreu
+        jogo.morte[jogo.qtdMortes].x= jogo.galinha.posX;
+
         jogo.galinha.vida--;
         jogo.pontuacao=0;
         jogo.galinha.pista=jogo.qtdPista-1; //nao sei como vai funcionar ainda mais tem q voltar pra posicao inicial
+        
+        jogo.qtdMortes++;
+
       } else{
         if (jogo.jogada.digitada=='w'){
           jogo.pontuacao++;
@@ -414,9 +427,9 @@ tJogo ReailizarJogo (tJogo jogo, char * argv[]){
           }
         }
       }
-      jogo.iteracao++;
       //ImprimeJogo(jogo);
     }
+    jogo.iteracao++;
     //ImprimeJogo(jogo);
   }
   
@@ -435,19 +448,23 @@ int GalinhaDerrotada (tJogo jogo){
     return 1;
   } return 0;
 }
-
 tJogo MoveGalinha (tJogo jogo, tJogada jogada){
   if (jogada.digitada=='w'){
     //printf ("%d\n", jogo.galinha.pista);
     jogo.galinha.pista--; //sobe uma pista
+    jogo.morte[jogo.qtdMortes].pista= jogo.galinha.pista+1;
     //printf ("%d\n", jogo.galinha.pista);
     //jogo.pontuacao++; //ganha 1 ponto se foi pra frente
   } else if (jogada.digitada=='s'){
    //printf ("PISTA:%d\n", jogo.galinha.pista);
     if (jogo.galinha.pista<jogo.qtdPista-1) { //nao esta na pista mais inferior
       jogo.galinha.pista++; //desce uma pista
+      jogo.morte[jogo.qtdMortes].pista= jogo.galinha.pista-1;
+    } else {
+      jogo.morte[jogo.qtdMortes].pista= jogo.galinha.pista;
     }
   }
+  jogo.morte[jogo.qtdMortes].y= jogo.morte[jogo.qtdMortes].pista*3 -2;
   return jogo;
 }
 tJogo MovimentaCarros (tJogo jogo){
@@ -459,38 +476,42 @@ tJogo MovimentaCarros (tJogo jogo){
       } else if (jogo.pista[i].direcao=='E') {
         jogo.pista[i].carros[j].posX= jogo.pista[i].carros[j].posX - jogo.pista[i].velocidade;
       }
+      jogo.pista[i].carros[j].posX= (jogo.pista[i].carros[j].posX+jogo.largura)%jogo.largura;
     }
   }
   return jogo;
 }
-int LeJogada (){
+char LeJogada (){
   int i;
   char carac;
-  scanf("%c", &carac);
-  if (carac=='w'){
-    return -1;
-  } else if (carac=='s'){
-    return 1;
-  } return 0;
+  
+  do {
+    scanf("%c", &carac);
+  } while (carac!=' ' && carac!='w' && carac!='s');
+
+  return carac;
 }
 int VerificaColisao (tJogo jogo){
   int i,j, k;
+  // printf ("posX1:%d\n", jogo.pista[2].carros[1].posX);
+  // printf ("posX2:%d\n", jogo.pista[2].carros[2].posX);
+
   k= jogo.galinha.pista;// inicializando k como a pista que tem a galinha
   for (i=0; i<jogo.pista[k].qtdCarros; i++){
     for (j=-1; j<2; j++){ //matriz[2][3]= 3 comparacoes pois se encostar emcima encosta embaixo
       if (jogo.pista[k].carros[i].posX+j==jogo.galinha.posX-1 || jogo.pista[k].carros[i].posX+j==jogo.galinha.posX || jogo.pista[k].carros[i].posX+j==jogo.galinha.posX+1){
+        jogo.morte[jogo.qtdMortes].carro= i+1; //indice do carro que colidiu
+        //printf ("%d", jogo.morte[jogo.qtdMortes].carro);
         return 1; //colidiu
       }
     }
   }
   return 0;
 }
-
 void ImprimeJogo (tJogo jogo){
   printf ("Pontos: %d | Vidas: %d | Iteracoes: %d\n", jogo.pontuacao, jogo.galinha.vida, jogo.iteracao);
   ImprimeMapa (jogo);
 }
-
 void ImprimeMapa (tJogo jogo){
   int i,j,k;
 
@@ -505,7 +526,6 @@ void ImprimeMapa (tJogo jogo){
 
   ImprimeUltimaPista (jogo);
 }
-
 void ImprimeTopo (tJogo jogo){
   int i;
   printf ("|");
@@ -514,9 +534,8 @@ void ImprimeTopo (tJogo jogo){
   }
   printf ("|\n");
 }
-
 void ImprimePista (tJogo jogo, tPista pista, int galinha){
-  int i, j;
+  int i, j, k;
   char linha1[101]= {0};
   char linha2[101]= {0};
 
@@ -527,6 +546,16 @@ void ImprimePista (tJogo jogo, tPista pista, int galinha){
   }
   linha1[i]='\0';
   linha2[i]='\0';
+
+  if (pista.qtdCarros==0 && (galinha)){
+      linha1[jogo.galinha.posX-2]= jogo.galinha.forma[0][0];
+      linha1[jogo.galinha.posX-1]= jogo.galinha.forma[0][1];
+      linha1[jogo.galinha.posX]= jogo.galinha.forma[0][2];
+
+      linha2[jogo.galinha.posX-2]= jogo.galinha.forma[1][0];
+      linha2[jogo.galinha.posX-1]= jogo.galinha.forma[1][1];
+      linha2[jogo.galinha.posX]= jogo.galinha.forma[1][2];
+  }
 
   //alocando carros na pista
   for (i=0; i<pista.qtdCarros; i++){
@@ -567,7 +596,6 @@ void ImprimePista (tJogo jogo, tPista pista, int galinha){
   printf ("|%s|\n", linha2);
   ImprimeDivisao (jogo);
 }
-
 void ImprimeDivisao(tJogo jogo){
   int i;
   printf ("|");
@@ -581,7 +609,6 @@ void ImprimeDivisao(tJogo jogo){
   }
   printf ("|\n");
 }
-
 void ImprimeUltimaPista (tJogo jogo){
   int i,j;
   char linha1[101]={0};
@@ -610,124 +637,32 @@ void ImprimeUltimaPista (tJogo jogo){
   ImprimeTopo(jogo);
 }
 
-// void GerarResumo (tJogo jogo){
-  
-// }
+//funcoes de resumo.txt
+void ImprimeResumo (FILE * arq, tJogo jogo);
 
+void GerarResumo (tJogo jogo, char * argv[]){
+  char diretorio[1000];
+  strcpy (diretorio, argv[1]);
 
+  strcat(diretorio, "/saida/resumo.txt");
 
+  FILE * arq= fopen (diretorio, "w");
+  if (arq == NULL) {
+        printf("Erro: pasta de saida nao existe!\n"); //sempre deveria existir
+        exit (1); // encerra o programa
+    }
 
+  ImprimeResumo (arq, jogo);
+  fclose(arq);
+}
 
+void ImprimeResumo (FILE * arq, tJogo jogo){
+  int i;
 
-// int main(int argc, char * argv[]){
-//   printf ("iniciando o jogo\n");
-  
-//   VerificaQtArgum (argc); // verifica se passou o caminho
-  
-//   //printf ("argc: %d\n", argc);
-//   //printf("Argumento: %s\n", argv[1]);
-  
-//   char diretorio[1001]; // verificar erro de mais de 1000 carac
-  
-//   //printf ("diretorio: %s\n", diretorio);
-  
-  
-  
-//   //carregando e lendo arquivo de configuracao incial
-//   // FILE *conf;
-//   // char buffer[1000];
-//   // char arquivoDeTexto[] = "/config_inicial.txt"; // ja com o \0 - 20 espacos
-//   // char diretorio_config_inicial[1020]; //max de 1000+20
-  
-//   // strcpy(diretorio_config_inicial, diretorio);
-  
-//   // strcat(diretorio_config_inicial, arquivoDeTexto); //caminho+config_inicial.txt
-//   // //printf("\n%s\n", diretorio_config_inicial);
-  
-//   // conf = fopen(diretorio_config_inicial, "r");
-//   // if (conf == NULL) {
-//   //   printf ("Erro ao abrir o arquivo configuracao inicial");
-//   //   exit(1);
-//   // }
-  
-//   // while (fgets(buffer, sizeof(buffer), conf) != NULL) { //le o arquivo ate ficar NULL
-//   //   printf("%s", buffer); // Imprime a linha
-//   // }
-//   // printf ("\n");
-//   // fclose(conf);
+  for (i=0; i<jogo.qtdMortes; i++){
+    fprintf(arq, "[%d] Na pista %d o carro %d atropelou a galinha na posicao (%d,%d).\n", 
+      jogo.morte[i].iteracao, jogo.morte[i].pista, jogo.morte[i].carro, jogo.morte[i].x, jogo.morte[i].y);
+  }
+  fprintf(arq, "[%d] Fim de jogo", jogo.iteracao);
+}
 
-//   //separando as vriaveis que vamos usar no futuro
-
-
-  
-//   //carregando e lendo arquivo de personagem
-  
-//   FILE *person;
-//   char arquivoDePersonagem[] = "/personagens.txt"; // ja coloca o \0 no final - 16 espacos
-//   char diretorio_personagens[1016]; // contando o \0
-  
-//   strcpy(diretorio_personagens, diretorio);
-  
-//   strcat(diretorio_personagens, arquivoDePersonagem);
-//   printf ("\n%s\n", diretorio_personagens);
-  
-//   person = fopen(diretorio_personagens, "r");
-//   if (person == NULL) {
-//     printf ("Erro ao abrir o arquivo personagens");
-//     exit(1);
-//   }
-  
-//   while (fgets(buffer, sizeof(buffer), person) != NULL) {
-//     printf("%s", buffer); // Imprime a linha
-//   }
-//   printf ("\n");
-//   fclose(person);
-
-//   //FILE *inicializacao;
-//   //char arquivoDeInicializacao[] = 
-  
-  
-//   printf ("finalizando o jogo\n");
-// }
-
-
-
-// // tJogo LeArquivos(char argv[], int tam, char diretorio[]){
-// //   tJogo jogo;
-// //   int comprimento = strlen(argv);
-// //   VerificaArgum(comprimento, tam); // verifica se passou de 1000 carac
-// //   strcpy(diretorio, argv);
-
-// //   //printf("comprimento: %d\n", comprimento);
-// //   //printf("diretorio: %s\n", diretorio);
-
-// //   FILE *conf;
-// //   char arquivoDeTexto[] = "/config_inicial.txt"; // ja com o \0 - 20 espacos
-// //   char diretorio_config_inicial[1020]; //max de 1000+20
-  
-// //   strcpy(diretorio_config_inicial, diretorio); //copia 2 pro 1
-// //   strcat(diretorio_config_inicial, arquivoDeTexto); //caminho+config_inicial.txt
-// //   //printf("\n%s\n", diretorio_config_inicial);
-  
-// //   conf = fopen(diretorio_config_inicial, "r");
-// //   if (conf == NULL) {
-// //     printf ("Erro ao abrir o arquivo configuracao inicial");
-// //     exit(1);
-// //   }
-  
-// //   while (1) {
-// //       fscanf (conf, "%d", &jogo.animacao);
-// //   }
-
-// //   printf ("\n");
-// //   fclose(conf);
-
-// //   return jogo;
-// // }
-
-
-
-// void CriaPista (tJogo jogo){
-//   int i, j;
-//   for (i=0; i<)
-// }
