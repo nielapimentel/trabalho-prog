@@ -16,7 +16,7 @@ typedef struct {
   int posX;
   //int pista;
   //int endereco[11];
-  //char forma[2][3];
+  char forma[2][3];
 } tCarro;
 
 typedef struct {
@@ -25,7 +25,7 @@ typedef struct {
   tCarro carros[10];
   int qtdCarros;
   //tGalinha galinha;
-  char direcao;
+  int direcao;
   int velocidade;
 } tPista;
 
@@ -63,7 +63,7 @@ typedef struct {
 //funcoes da main
 tJogo InicializarJogo(int argc, char * argv[]); //feito
 tJogo ReailizarJogo (tJogo jogo, char * argv[]);
-void GerarResumo (tJogo jogo);
+//void GerarResumo (tJogo jogo);
 //void GerarEstatisticas (tJogo jogo);
 //void GerarRanking (tJogo jogo);
 //void GerarMapaDeCalor (tJogo jogo);
@@ -207,6 +207,7 @@ tJogo LeArquivos(char * argv[]){
       fscanf(config, "%c", &lixo);
     } else if (carac=='G') { 
       fscanf(config, "%d %d", &jogo.galinha.posX, &jogo.galinha.vida);
+      jogo.pista[i].qtdCarros=0;
     } else {
       printf ("Erro ao ler config_inicial.txt"); //nao eh pra isso acontecer nunca
     }
@@ -360,7 +361,7 @@ void ImprimeDivisaoArq (FILE * arq, tJogo jogo){
 //funcoes do RealizarJogo
 int GalinhaGanhou (tJogo jogo); // retorna 1 se ganhou
 int GalinhaDerrotada (tJogo jogo); //perdeu todas as vidas - retora 1
-//tJogada LeJogada ();
+int LeJogada ();
 tJogo MoveGalinha (tJogo jogo, tJogada jogada); // adiciona 1 ponto se for w
 tJogo MovimentaCarros (tJogo jogo); 
 int VerificaColisao (tJogo jogo); //passar pela matriz de carros e ver se algum x e y bate com o da galinha
@@ -379,36 +380,44 @@ tJogo ReailizarJogo (tJogo jogo, char * argv[]){
   jogo.iteracao=0;
   jogo.pontuacao=0;
 
-  jogo.galinha.pista=jogo.qtdPista; //galinha na ultima pista
+  jogo.galinha.pista=jogo.qtdPista-1; //galinha na ultima pista
+  char lixo; //consome \n
 
-  ImprimeJogo(jogo);
+  //ImprimeJogo(jogo);
 
   while (1) {
     if (GalinhaGanhou(jogo)){
-      jogo.pontuacao= jogo.pontuacao+10;
       ImprimeJogo(jogo);
-      printf ("Parabens! Voce atravessou todas as pistas e venceu!");
+      printf ("Parabens! Voce atravessou todas as pistas e venceu!\n");
       break;
     } else if (GalinhaDerrotada(jogo)) {
       ImprimeJogo(jogo);
-      printf ("Voce perdeu todas as vidas! Fim de jogo.");
+      printf ("Voce perdeu todas as vidas! Fim de jogo.\n");
       break;
     } else { //galinha NAO derrotada NEM vitoriosa
       ImprimeJogo(jogo);
+      //jogo.jogada.digitada= LeJogada();
       scanf ("%c", &jogo.jogada.digitada);
+      //printf ("%c", jogo.jogada.digitada);
+      scanf("%c", &lixo);
       jogo= MoveGalinha (jogo, jogo.jogada); // adiciona 1 ponto se for pra frente
       jogo= MovimentaCarros (jogo);
       if (VerificaColisao(jogo)) { // 1==colidiu
         jogo.galinha.vida--;
         jogo.pontuacao=0;
-        jogo.galinha.pista=0; //nao sei como vai funcionar ainda mais tem q voltar pra posicao inicial
+        jogo.galinha.pista=jogo.qtdPista-1; //nao sei como vai funcionar ainda mais tem q voltar pra posicao inicial
       } else{
         if (jogo.jogada.digitada=='w'){
           jogo.pontuacao++;
+          if (jogo.galinha.pista==0) {
+            jogo.pontuacao= jogo.pontuacao+10;
+          }
         }
       }
       jogo.iteracao++;
+      //ImprimeJogo(jogo);
     }
+    //ImprimeJogo(jogo);
   }
   
   return jogo;
@@ -429,16 +438,53 @@ int GalinhaDerrotada (tJogo jogo){
 
 tJogo MoveGalinha (tJogo jogo, tJogada jogada){
   if (jogada.digitada=='w'){
+    //printf ("%d\n", jogo.galinha.pista);
     jogo.galinha.pista--; //sobe uma pista
-    jogo.pontuacao++; //ganha 1 ponto se foi pra frente
+    //printf ("%d\n", jogo.galinha.pista);
+    //jogo.pontuacao++; //ganha 1 ponto se foi pra frente
   } else if (jogada.digitada=='s'){
-    if (jogo.galinha.pista<jogo.qtdPista) { //nao esta na pista mais inferior
+   //printf ("PISTA:%d\n", jogo.galinha.pista);
+    if (jogo.galinha.pista<jogo.qtdPista-1) { //nao esta na pista mais inferior
       jogo.galinha.pista++; //desce uma pista
     }
   }
   return jogo;
 }
-
+tJogo MovimentaCarros (tJogo jogo){
+  int i,j, aux=0;
+  for (i=0; i<jogo.qtdPista; i++){
+    for (j=0; j<jogo.pista[i].qtdCarros; j++) {
+      if (jogo.pista[i].direcao=='D'){
+        jogo.pista[i].carros[j].posX = jogo.pista[i].carros[j].posX + jogo.pista[i].velocidade;
+      } else if (jogo.pista[i].direcao=='E') {
+        jogo.pista[i].carros[j].posX= jogo.pista[i].carros[j].posX - jogo.pista[i].velocidade;
+      }
+    }
+  }
+  return jogo;
+}
+int LeJogada (){
+  int i;
+  char carac;
+  scanf("%c", &carac);
+  if (carac=='w'){
+    return -1;
+  } else if (carac=='s'){
+    return 1;
+  } return 0;
+}
+int VerificaColisao (tJogo jogo){
+  int i,j, k;
+  k= jogo.galinha.pista;// inicializando k como a pista que tem a galinha
+  for (i=0; i<jogo.pista[k].qtdCarros; i++){
+    for (j=-1; j<2; j++){ //matriz[2][3]= 3 comparacoes pois se encostar emcima encosta embaixo
+      if (jogo.pista[k].carros[i].posX+j==jogo.galinha.posX-1 || jogo.pista[k].carros[i].posX+j==jogo.galinha.posX || jogo.pista[k].carros[i].posX+j==jogo.galinha.posX+1){
+        return 1; //colidiu
+      }
+    }
+  }
+  return 0;
+}
 
 void ImprimeJogo (tJogo jogo){
   printf ("Pontos: %d | Vidas: %d | Iteracoes: %d\n", jogo.pontuacao, jogo.galinha.vida, jogo.iteracao);
@@ -485,13 +531,36 @@ void ImprimePista (tJogo jogo, tPista pista, int galinha){
   //alocando carros na pista
   for (i=0; i<pista.qtdCarros; i++){
     j= pista.carros[i].posX -1;
-    linha1[j-1]= jogo.formaCarro[0][0];
-    linha1[j]= jogo.formaCarro[0][1];
-    linha1[j+1]= jogo.formaCarro[0][2];
 
-    linha2[j-1]= jogo.formaCarro[1][0];
-    linha2[j]= jogo.formaCarro[1][1];
-    linha2[j+1]= jogo.formaCarro[1][2];
+    linha1[(j-1+jogo.largura)%jogo.largura]= jogo.formaCarro[0][0];
+    linha1[(j+jogo.largura)%jogo.largura]= jogo.formaCarro[0][1];
+    linha1[(j+1+jogo.largura)%jogo.largura]= jogo.formaCarro[0][2];
+
+    linha2[(j-1+jogo.largura)%jogo.largura]= jogo.formaCarro[1][0];
+    linha2[(j+jogo.largura)%jogo.largura]= jogo.formaCarro[1][1];
+    linha2[(j+1+jogo.largura)%jogo.largura]= jogo.formaCarro[1][2];
+
+    if (galinha){//tem galinha na pista
+      linha1[jogo.galinha.posX-2]= jogo.galinha.forma[0][0];
+      linha1[jogo.galinha.posX-1]= jogo.galinha.forma[0][1];
+      linha1[jogo.galinha.posX]= jogo.galinha.forma[0][2];
+
+      linha2[jogo.galinha.posX-2]= jogo.galinha.forma[1][0];
+      linha2[jogo.galinha.posX-1]= jogo.galinha.forma[1][1];
+      linha2[jogo.galinha.posX]= jogo.galinha.forma[1][2];
+    }
+  }
+
+  if (i==0 && jogo.galinha.pista==i){
+    if (galinha){//tem galinha na pista
+      linha1[jogo.galinha.posX-2]= jogo.galinha.forma[0][0];
+      linha1[jogo.galinha.posX-1]= jogo.galinha.forma[0][1];
+      linha1[jogo.galinha.posX]= jogo.galinha.forma[0][2];
+
+      linha2[jogo.galinha.posX-2]= jogo.galinha.forma[1][0];
+      linha2[jogo.galinha.posX-1]= jogo.galinha.forma[1][1];
+      linha2[jogo.galinha.posX]= jogo.galinha.forma[1][2];
+    }
   }
     
   printf ("|%s|\n", linha1);
@@ -524,15 +593,17 @@ void ImprimeUltimaPista (tJogo jogo){
   }
   linha1[i]='\0';
   linha2[i]='\0';  
-  
-  j= jogo.galinha.posX -1;
-  linha1[j-1]= jogo.galinha.forma[0][0];
-  linha1[j]= jogo.galinha.forma[0][1];
-  linha1[j+1]= jogo.galinha.forma[0][2];
-  
-  linha2[j-1]= jogo.galinha.forma[1][0];
-  linha2[j]= jogo.galinha.forma[1][1];
-  linha2[j+1]= jogo.galinha.forma[1][2];
+  //printf ("%d %d", jogo.galinha.pista, jogo.qtdPista-1);
+  if (jogo.galinha.pista==jogo.qtdPista-1) {
+    j= jogo.galinha.posX -1;
+    linha1[j-1]= jogo.galinha.forma[0][0];
+    linha1[j]= jogo.galinha.forma[0][1];
+    linha1[j+1]= jogo.galinha.forma[0][2];
+    
+    linha2[j-1]= jogo.galinha.forma[1][0];
+    linha2[j]= jogo.galinha.forma[1][1];
+    linha2[j+1]= jogo.galinha.forma[1][2];
+  }
 
   printf("|%s|\n", linha1);
   printf("|%s|\n", linha2);
