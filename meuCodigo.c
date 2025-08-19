@@ -42,6 +42,22 @@ typedef struct {
   int y; //pos superior
 } tMorte;
 
+typedef struct{
+  int id_pista;
+  int ide_carro;
+  int iteracao;
+} tRanking;
+
+
+typedef struct {
+  int alturaMax;
+  int alturaAtual;
+  int morteMax;
+  int morteMin;
+  int movTotais;
+  int movOpostos;
+} tEstatistica;
+
 typedef struct {
   tPista pista[12];
   int qtdPista;
@@ -56,15 +72,10 @@ typedef struct {
   tGalinha galinha;
   tMorte morte[20]; //max de vidas - max de mortes
   int qtdMortes;
+  int colisao;
+  tEstatistica estatistica;
 } tJogo;
 
-typedef struct {
-  int alturaMax;
-  int morteMax;
-  int morteMin;
-  int movTotais;
-  int movOpostos;
-} tEstatistica;
 
 
 
@@ -75,8 +86,8 @@ typedef struct {
 tJogo InicializarJogo(int argc, char * argv[]); //feito
 tJogo ReailizarJogo (tJogo jogo, char * argv[]);
 void GerarResumo (tJogo jogo, char * argv[]);
-//void GerarEstatisticas (tJogo jogo);
-//void GerarRanking (tJogo jogo);
+void GerarEstatisticas (tJogo jogo, char * argv[]);
+//GerarRanking (tJogo jogo, char * argv[]);
 //void GerarMapaDeCalor (tJogo jogo);
 
 
@@ -87,8 +98,8 @@ int main(int argc, char * argv[]){
   jogao = ReailizarJogo(jogao, argv);
   
   GerarResumo(jogao, argv);
-  //GerarEstatisticas (jogao);
-  //GerarRanking (jogao);
+  GerarEstatisticas (jogao, argv);
+  //GerarRanking (jogao, argv);
   //GerarMapaDeCalor (jogao);
   
   return 0;
@@ -114,38 +125,6 @@ tJogo InicializarJogo(int argc, char * argv[]){
   
   jogo = LeArquivos (argv);
   GerarArqIni (jogo, argv);
-
-  //debugLeArquivos na raca
-  // int i=0, j=0;
-  // printf("animacao:%d\n", jogo.animacao);
-  // printf("largura:%d qtdPista:%d\n", jogo.largura, jogo.qtdPista);
-  //  for (i=0; i<jogo.qtdPista-1; i++){
-  //   printf ("qtdCarros da pista: %d\n", jogo.pista[i].qtdCarros);
-  //   if (jogo.pista[i].qtdCarros!=0){
-  //     printf ("direcao: %c ", jogo.pista[i].direcao);
-  //     printf ("velocidade: %d\n", jogo.pista[i].velocidade);
-  //     for (j=0; j<jogo.pista[i].qtdCarros; j++) {
-  //       printf ("carro%d: %d ", j, jogo.pista[i].carros[j].posX);
-  //     }
-  //     printf ("\n");
-  //   }
-  // }
-  // printf("%d %d\n",jogo.galinha.posX, jogo.galinha.vida);
-  // printf ("GALINHA:\n");
-  // for (i=0; i<2; i++){
-  //   for (j=0; j<3; j++){
-  //     printf("%c", jogo.galinha.forma[i][j]);
-  //   }
-  //   printf ("\n");
-  // }
-  // printf ("\n");
-  // printf ("CARRO:\n");
-  // for (i=0; i<2; i++){
-  //   for (j=0; j<3; j++){
-  //     printf("%c", jogo.formaCarro[i][j]);
-  //   }
-  //   printf ("\n");
-  // }
 
   return jogo;
 }
@@ -387,6 +366,13 @@ tJogo ReailizarJogo (tJogo jogo, char * argv[]){
   char lixo; //consome \n
   int countMortes;
 
+  jogo.estatistica.alturaAtual=2;
+  jogo.estatistica.alturaMax=0;
+  jogo.estatistica.morteMax=0;
+  jogo.estatistica.morteMin=0;
+  jogo.estatistica.movOpostos=0;
+  jogo.estatistica.movTotais=0;
+
   //ImprimeJogo(jogo);
 
   while (1) {
@@ -406,8 +392,29 @@ tJogo ReailizarJogo (tJogo jogo, char * argv[]){
       //scanf("%c", &lixo);
       jogo= MoveGalinha (jogo, jogo.jogada); // adiciona 1 ponto se for pra frente
       jogo= MovimentaCarros (jogo);
+      jogo.colisao=VerificaColisao(jogo);
+      if (jogo.colisao) { // se != de 0 entao colidiu
 
-      if (VerificaColisao(jogo)) { // 1==colidiu
+        if (jogo.qtdMortes==0){
+          jogo.estatistica.morteMax= jogo.estatistica.alturaAtual;
+          jogo.estatistica.morteMin=  jogo.estatistica.alturaAtual;
+        }
+        if (jogo.estatistica.morteMax<jogo.estatistica.alturaAtual){
+          jogo.estatistica.morteMax= jogo.estatistica.alturaAtual;
+        }
+        if (jogo.estatistica.morteMin>jogo.estatistica.alturaAtual){
+          jogo.estatistica.morteMin=  jogo.estatistica.alturaAtual;
+          //printf ("Altura maxima que a galinha chegou: %d\n", jogo.estatistica.alturaAtual);
+        }
+
+
+        jogo.estatistica.alturaAtual=2;
+
+        if (jogo.colisao==-1) {
+          jogo.morte[jogo.qtdMortes].carro= 1;
+        } else {
+          jogo.morte[jogo.qtdMortes].carro= jogo.colisao+1;
+        }
         //alocando dados pro tmorte;
         jogo.morte[jogo.qtdMortes].iteracao= jogo.iteracao+1; // qtdMortes==0
         //jogo.morte[jogo.qtdMortes].pista= jogo.galinha.pista; //se colidiu a pista da galinha foi onde ocorreu
@@ -423,9 +430,12 @@ tJogo ReailizarJogo (tJogo jogo, char * argv[]){
         if (jogo.jogada.digitada=='w'){
           jogo.pontuacao++;
           if (jogo.galinha.pista==0) {
-            jogo.pontuacao= jogo.pontuacao+10;
+            jogo.pontuacao= jogo.pontuacao+10; //ganhou
           }
         }
+      }
+      if (jogo.estatistica.alturaAtual>jogo.estatistica.alturaMax){
+        jogo.estatistica.alturaMax= jogo.estatistica.alturaAtual;
       }
       //ImprimeJogo(jogo);
     }
@@ -453,13 +463,21 @@ tJogo MoveGalinha (tJogo jogo, tJogada jogada){
     //printf ("%d\n", jogo.galinha.pista);
     jogo.galinha.pista--; //sobe uma pista
     jogo.morte[jogo.qtdMortes].pista= jogo.galinha.pista+1;
+    
+    jogo.estatistica.movTotais++;
+    jogo.estatistica.alturaAtual += 3;
     //printf ("%d\n", jogo.galinha.pista);
     //jogo.pontuacao++; //ganha 1 ponto se foi pra frente
   } else if (jogada.digitada=='s'){
-   //printf ("PISTA:%d\n", jogo.galinha.pista);
+    //printf ("PISTA:%d\n", jogo.galinha.pista);
+    jogo.estatistica.movTotais++;
+    jogo.estatistica.movOpostos++;
+
     if (jogo.galinha.pista<jogo.qtdPista-1) { //nao esta na pista mais inferior
       jogo.galinha.pista++; //desce uma pista
-      jogo.morte[jogo.qtdMortes].pista= jogo.galinha.pista-1;
+      jogo.morte[jogo.qtdMortes].pista= jogo.galinha.pista+1;
+
+      jogo.estatistica.alturaAtual -= 3;
     } else {
       jogo.morte[jogo.qtdMortes].pista= jogo.galinha.pista;
     }
@@ -500,9 +518,10 @@ int VerificaColisao (tJogo jogo){
   for (i=0; i<jogo.pista[k].qtdCarros; i++){
     for (j=-1; j<2; j++){ //matriz[2][3]= 3 comparacoes pois se encostar emcima encosta embaixo
       if (jogo.pista[k].carros[i].posX+j==jogo.galinha.posX-1 || jogo.pista[k].carros[i].posX+j==jogo.galinha.posX || jogo.pista[k].carros[i].posX+j==jogo.galinha.posX+1){
-        jogo.morte[jogo.qtdMortes].carro= i+1; //indice do carro que colidiu
-        //printf ("%d", jogo.morte[jogo.qtdMortes].carro);
-        return 1; //colidiu
+        if (i==0){
+          return -1;
+        }
+        return i; //retornando o indice do carro
       }
     }
   }
@@ -666,3 +685,49 @@ void ImprimeResumo (FILE * arq, tJogo jogo){
   fprintf(arq, "[%d] Fim de jogo", jogo.iteracao);
 }
 
+void ImprimeEstatisticas (FILE * arq, tJogo jogo);
+
+void GerarEstatisticas (tJogo jogo, char * argv[]){
+  char diretorio[1000];
+  strcpy (diretorio, argv[1]);
+  strcat (diretorio, "/saida/estatistica.txt");
+
+  FILE * arq = fopen(diretorio, "w");
+  if (arq==NULL){
+    printf("Erro: pasta de saida nao existe!\n"); //sempre deveria existir
+    exit (1); // encerra o programa
+  }
+
+  ImprimeEstatisticas(arq, jogo);
+  fclose(arq);
+}
+
+void ImprimeEstatisticas (FILE * arq, tJogo jogo){
+  fprintf (arq, "Numero total de movimentos: %d\n", jogo.estatistica.movTotais);
+  fprintf (arq, "Altura maxima que a galinha chegou: %d\n", jogo.estatistica.alturaMax);
+  // debug: fprintf (arq, "Altura maxima que a galinha chegou: %d\n", jogo.estatistica.alturaAtual);
+  fprintf (arq, "Altura maxima que a galinha foi atropelada: %d\n", jogo.estatistica.morteMax);
+  fprintf (arq, "Altura minima que a galinha foi atropelada: %d\n", jogo.estatistica.morteMin);
+  fprintf (arq, "Numero de movimentos na direcao oposta: %d\n", jogo.estatistica.movOpostos);  
+}
+
+// void ImprimeRanking(FILE * arq, tJogo jogo);
+
+// void GerarRanking (tJogo jogo, char * argv[]){
+//     char diretorio[1000];
+//   strcpy (diretorio, argv[1]);
+//   strcat (diretorio, "/saida/ranking.txt");
+
+//   FILE * arq = fopen(diretorio, "w");
+//   if (arq==NULL){
+//     printf("Erro: pasta de saida nao existe!\n"); //sempre deveria existir
+//     exit (1); // encerra o programa
+//   }
+
+//   ImprimeRanking(arq, jogo);
+//   fclose(arq);
+// }
+
+// void ImprimeRanking(FILE * arq, tJogo jogo){
+//   fprintf (arq, "id_pista,id_carro,iteracao\n");
+// }
