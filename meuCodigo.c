@@ -27,6 +27,7 @@ typedef struct {
   //tGalinha galinha;
   int direcao;
   int velocidade;
+  int countHeatMap;
 } tPista;
 
 typedef struct {
@@ -41,13 +42,6 @@ typedef struct {
   int x; //pos central
   int y; //pos superior
 } tMorte;
-
-typedef struct{
-  int id_pista;
-  int ide_carro;
-  int iteracao;
-} tRanking;
-
 
 typedef struct {
   int alturaMax;
@@ -74,6 +68,7 @@ typedef struct {
   int qtdMortes;
   int colisao;
   tEstatistica estatistica;
+  int HeatMapMatriz[35][100];
 } tJogo;
 
 
@@ -87,8 +82,8 @@ tJogo InicializarJogo(int argc, char * argv[]); //feito
 tJogo ReailizarJogo (tJogo jogo, char * argv[]);
 void GerarResumo (tJogo jogo, char * argv[]);
 void GerarEstatisticas (tJogo jogo, char * argv[]);
-//GerarRanking (tJogo jogo, char * argv[]);
-//void GerarMapaDeCalor (tJogo jogo);
+void GerarRanking (tJogo jogo, char * argv[]);
+void GerarMapaDeCalor (tJogo jogo, char * argv[]);
 
 
 int main(int argc, char * argv[]){
@@ -99,8 +94,8 @@ int main(int argc, char * argv[]){
   
   GerarResumo(jogao, argv);
   GerarEstatisticas (jogao, argv);
-  //GerarRanking (jogao, argv);
-  //GerarMapaDeCalor (jogao);
+  GerarRanking (jogao, argv);
+  GerarMapaDeCalor (jogao, argv);
   
   return 0;
 }
@@ -373,6 +368,8 @@ tJogo ReailizarJogo (tJogo jogo, char * argv[]){
   jogo.estatistica.movOpostos=0;
   jogo.estatistica.movTotais=0;
 
+  //jogo.HeatMapMatriz[35][100]= {0};
+
   //ImprimeJogo(jogo);
 
   while (1) {
@@ -406,7 +403,6 @@ tJogo ReailizarJogo (tJogo jogo, char * argv[]){
           jogo.estatistica.morteMin=  jogo.estatistica.alturaAtual;
           //printf ("Altura maxima que a galinha chegou: %d\n", jogo.estatistica.alturaAtual);
         }
-
 
         jogo.estatistica.alturaAtual=2;
 
@@ -462,10 +458,13 @@ tJogo MoveGalinha (tJogo jogo, tJogada jogada){
   if (jogada.digitada=='w'){
     //printf ("%d\n", jogo.galinha.pista);
     jogo.galinha.pista--; //sobe uma pista
+    //jogo.pista[(jogo.estatistica.alturaAtual-2)/3].countHeatMap++;
     jogo.morte[jogo.qtdMortes].pista= jogo.galinha.pista+1;
     
     jogo.estatistica.movTotais++;
     jogo.estatistica.alturaAtual += 3;
+
+    jogo.pista[jogo.galinha.pista].countHeatMap++;
     //printf ("%d\n", jogo.galinha.pista);
     //jogo.pontuacao++; //ganha 1 ponto se foi pra frente
   } else if (jogada.digitada=='s'){
@@ -473,6 +472,8 @@ tJogo MoveGalinha (tJogo jogo, tJogada jogada){
     jogo.estatistica.movTotais++;
     jogo.estatistica.movOpostos++;
 
+    //jogo.pista[(jogo.estatistica.alturaAtual-2)/3].countHeatMap++;
+    jogo.pista[jogo.galinha.pista].countHeatMap++;
     if (jogo.galinha.pista<jogo.qtdPista-1) { //nao esta na pista mais inferior
       jogo.galinha.pista++; //desce uma pista
       jogo.morte[jogo.qtdMortes].pista= jogo.galinha.pista+1;
@@ -480,6 +481,7 @@ tJogo MoveGalinha (tJogo jogo, tJogada jogada){
       jogo.estatistica.alturaAtual -= 3;
     } else {
       jogo.morte[jogo.qtdMortes].pista= jogo.galinha.pista;
+      jogo.pista[jogo.galinha.pista].countHeatMap++;
     }
   }
   jogo.morte[jogo.qtdMortes].y= jogo.morte[jogo.qtdMortes].pista*3 -2;
@@ -711,23 +713,84 @@ void ImprimeEstatisticas (FILE * arq, tJogo jogo){
   fprintf (arq, "Numero de movimentos na direcao oposta: %d\n", jogo.estatistica.movOpostos);  
 }
 
-// void ImprimeRanking(FILE * arq, tJogo jogo);
+void ImprimeRanking(FILE * arq, tJogo jogo);
 
-// void GerarRanking (tJogo jogo, char * argv[]){
-//     char diretorio[1000];
-//   strcpy (diretorio, argv[1]);
-//   strcat (diretorio, "/saida/ranking.txt");
+void GerarRanking (tJogo jogo, char * argv[]){
+  char diretorio[1000];
+  strcpy (diretorio, argv[1]);
+  strcat (diretorio, "/saida/ranking.txt");
 
-//   FILE * arq = fopen(diretorio, "w");
-//   if (arq==NULL){
-//     printf("Erro: pasta de saida nao existe!\n"); //sempre deveria existir
-//     exit (1); // encerra o programa
-//   }
+  FILE * arq = fopen(diretorio, "w");
+  if (arq==NULL){
+    printf("Erro: pasta de saida nao existe!\n"); //sempre deveria existir
+    exit (1); // encerra o programa
+  }
 
-//   ImprimeRanking(arq, jogo);
-//   fclose(arq);
-// }
+  ImprimeRanking(arq, jogo);
+  fclose(arq);
+}
 
-// void ImprimeRanking(FILE * arq, tJogo jogo){
-//   fprintf (arq, "id_pista,id_carro,iteracao\n");
-// }
+void ImprimeRanking(FILE * arq, tJogo jogo){
+  fprintf (arq, "id_pista,id_carro,iteracao\n");
+
+  tMorte morteCrescente[20] = {0};
+  int i, j, menorMorte;
+  tMorte aux;
+
+  for (i=0; i<jogo.qtdMortes; i++){
+    morteCrescente[i]= jogo.morte[i];
+  }
+  
+  for (i=0; i<jogo.qtdMortes-1; i++){
+    menorMorte= i;
+    for (j=i+1; j<jogo.qtdMortes; j++) {
+      if (morteCrescente[j].pista<morteCrescente[menorMorte].pista) {
+        menorMorte=j;
+      } else if (morteCrescente[j].pista==morteCrescente[menorMorte].pista) {
+        if (morteCrescente[j].carro<morteCrescente[menorMorte].carro){
+          menorMorte= j;
+        } else if (morteCrescente[j].carro==morteCrescente[menorMorte].carro ) {
+          if (morteCrescente[j].iteracao>morteCrescente[menorMorte].iteracao){
+            menorMorte= j;
+          }
+        }
+      }
+    }
+    
+    if (menorMorte!=i){
+      aux= morteCrescente[i];
+      morteCrescente[i]=morteCrescente[menorMorte];
+      morteCrescente[menorMorte]=aux;
+    }
+  }
+  
+  
+  for (i=0; i<jogo.qtdMortes; i++){
+    fprintf(arq, "%d,%d,%d\n", morteCrescente[i].pista, morteCrescente[i].carro, morteCrescente[i].iteracao);
+  }
+}
+
+void ImprimeHeat(FILE * arq, tJogo jogo);
+
+void GerarMapaDeCalor (tJogo jogo, char * argv[]){
+  char diretorio[1000];
+  strcpy (diretorio, argv[1]);
+  strcat (diretorio, "/saida/heatmap.txt");
+
+  FILE * arq = fopen(diretorio, "w");
+  if (arq==NULL){
+    printf("Erro: pasta de saida nao existe!\n"); //sempre deveria existir
+    exit (1); // encerra o programa
+  }
+
+  ImprimeHeat(arq, jogo);
+  fclose(arq);
+}
+
+
+void ImprimeHeat(FILE * arq, tJogo jogo){
+  int i=0;
+  for (i=0; i<jogo.qtdPista; i++){
+    printf ("%d", jogo.pista[i].countHeatMap);
+  }
+}
