@@ -16,7 +16,7 @@ typedef struct {
   int posX;
   //int pista;
   //int endereco[11];
-  char forma[2][3];
+  //char forma[4][2][3];
 } tCarro;
 
 typedef struct {
@@ -61,7 +61,8 @@ typedef struct {
   int pontuacao;
   int iteracao;
   int animacao;
-  char formaCarro[2][3];
+  char formaCarro[4][2][3];
+  int formaAtual;
   //tCarro carro[12][10];
   //int numCarro[10];
   tGalinha galinha;
@@ -173,7 +174,7 @@ tJogo LeArquivos(char * argv[]){
   //fscanf (config, "%c", &lixo);
   //printf ("\n lixo:%c.\n", lixo);
 
-  int i, j=0;
+  int i, j, k;
   char carac;
 
   for (i=0; i<jogo.qtdPista; i++){
@@ -212,11 +213,13 @@ tJogo LeArquivos(char * argv[]){
     fscanf(person, "%c", &lixo); //consome o \n
   }
 
-  for(i=0; i<2; i++){
-    for (j=0; j<3; j++){
-      fscanf (person, "%c", &jogo.formaCarro[i][j]);
+  for (k=0; k<4; k++){
+    for(i=0; i<2; i++){
+      for (j=0; j<3; j++){
+        fscanf (person, "%c", &jogo.formaCarro[k][i][j]);
+      }
+      fscanf(person, "%c", &lixo); //consome o \n
     }
-    fscanf(person, "%c", &lixo); //consome o \n
   }
 
   fclose(person);
@@ -305,13 +308,13 @@ void ImprimePistaArq (FILE * arq, tJogo jogo, tPista pista) {
   //alocando carros na pista
   for (i=0; i<pista.qtdCarros; i++){
     j= pista.carros[i].posX -1;
-    linha1[(j-1+jogo.largura)%jogo.largura]= jogo.formaCarro[0][0];
-    linha1[(j+jogo.largura)%jogo.largura]= jogo.formaCarro[0][1];
-    linha1[(j+1+jogo.largura)%jogo.largura]= jogo.formaCarro[0][2];
+    linha1[(j-1+jogo.largura)%jogo.largura]= jogo.formaCarro[0][0][0];
+    linha1[(j+jogo.largura)%jogo.largura]= jogo.formaCarro[0][0][1];
+    linha1[(j+1+jogo.largura)%jogo.largura]= jogo.formaCarro[0][0][2];
 
-    linha2[(j-1+jogo.largura)%jogo.largura]= jogo.formaCarro[1][0];
-    linha2[(j+jogo.largura)%jogo.largura]= jogo.formaCarro[1][1];
-    linha2[(j+1+jogo.largura)%jogo.largura]= jogo.formaCarro[1][2];
+    linha2[(j-1+jogo.largura)%jogo.largura]= jogo.formaCarro[0][1][0];
+    linha2[(j+jogo.largura)%jogo.largura]= jogo.formaCarro[0][1][1];
+    linha2[(j+1+jogo.largura)%jogo.largura]= jogo.formaCarro[0][1][2];
   }
 
   fprintf(arq, "|%s|\n", linha1);
@@ -349,6 +352,7 @@ void ImprimeTopo (tJogo jogo);
 void ImprimePista (tJogo jogo, tPista pista, int galinha);
 void ImprimeDivisao(tJogo jogo);
 void ImprimeUltimaPista (tJogo jogo);
+tJogo AtualizaFormaCarro (tJogo jogo);
 
 tJogo ReailizarJogo (tJogo jogo, char * argv[]){
 
@@ -374,6 +378,7 @@ tJogo ReailizarJogo (tJogo jogo, char * argv[]){
 
 
   //jogo.HeatMapMatriz[35][100]= {0};
+  jogo.formaAtual= 0;
 
   //ImprimeJogo(jogo);
 
@@ -395,13 +400,19 @@ tJogo ReailizarJogo (tJogo jogo, char * argv[]){
       jogo= MoveGalinha (jogo, jogo.jogada); // adiciona 1 ponto se for pra frente
       jogo.pista[jogo.galinha.pista].countHeatMap++;
       //printf ("\n%d\n", jogo.galinha.pista);
+      jogo= AtualizaFormaCarro (jogo);
       jogo= MovimentaCarros (jogo);
       jogo.colisao=VerificaColisao(jogo);
       if (jogo.colisao) { // se != de 0 entao colidiu
+
+        if (jogo.pista[jogo.galinha.pista].velocidade>1 && jogo.animacao){
+          jogo.pista[jogo.galinha.pista].velocidade--;
+        }
+        
         jogo.pista[jogo.galinha.pista].countHeatMap=-21; //galinha tem no maximo vinte vidas, nunca consegue se tornar positivo
-
+        
         jogo.pista[jogo.qtdPista-1].countHeatMap++; // voltou pro inicio
-
+        
         if (jogo.qtdMortes==0){
           jogo.estatistica.morteMax= jogo.estatistica.alturaAtual;
           jogo.estatistica.morteMin=  jogo.estatistica.alturaAtual;
@@ -413,10 +424,10 @@ tJogo ReailizarJogo (tJogo jogo, char * argv[]){
           jogo.estatistica.morteMin=  jogo.estatistica.alturaAtual;
           //printf ("Altura maxima que a galinha chegou: %d\n", jogo.estatistica.alturaAtual);
         }
-
-
+        
+        
         jogo.estatistica.alturaAtual=2;
-
+        
         if (jogo.colisao==-1) {
           jogo.morte[jogo.qtdMortes].carro= 1;
         } else {
@@ -426,13 +437,13 @@ tJogo ReailizarJogo (tJogo jogo, char * argv[]){
         jogo.morte[jogo.qtdMortes].iteracao= jogo.iteracao+1; // qtdMortes==0
         //jogo.morte[jogo.qtdMortes].pista= jogo.galinha.pista; //se colidiu a pista da galinha foi onde ocorreu
         jogo.morte[jogo.qtdMortes].x= jogo.galinha.posX;
-
+        
         jogo.galinha.vida--;
         jogo.pontuacao=0;
         jogo.galinha.pista=jogo.qtdPista-1; //nao sei como vai funcionar ainda mais tem q voltar pra posicao inicial
         
         jogo.qtdMortes++;
-
+        
       } else{
         if (jogo.jogada.digitada=='w'){
           jogo.pontuacao++;
@@ -450,6 +461,16 @@ tJogo ReailizarJogo (tJogo jogo, char * argv[]){
     //ImprimeJogo(jogo);
   }
   
+  return jogo;
+}
+
+tJogo AtualizaFormaCarro (tJogo jogo){
+  if (jogo.animacao==1){
+    jogo.formaAtual= (jogo.formaAtual+1)%4;
+  } else {
+    jogo.formaAtual=0;
+  }
+
   return jogo;
 }
 
@@ -591,13 +612,13 @@ void ImprimePista (tJogo jogo, tPista pista, int galinha){
   for (i=0; i<pista.qtdCarros; i++){
     j= pista.carros[i].posX -1;
 
-    linha1[(j-1+jogo.largura)%jogo.largura]= jogo.formaCarro[0][0];
-    linha1[(j+jogo.largura)%jogo.largura]= jogo.formaCarro[0][1];
-    linha1[(j+1+jogo.largura)%jogo.largura]= jogo.formaCarro[0][2];
+    linha1[(j-1+jogo.largura)%jogo.largura]= jogo.formaCarro[jogo.formaAtual][0][0];
+    linha1[(j+jogo.largura)%jogo.largura]= jogo.formaCarro[jogo.formaAtual][0][1];
+    linha1[(j+1+jogo.largura)%jogo.largura]= jogo.formaCarro[jogo.formaAtual][0][2];
 
-    linha2[(j-1+jogo.largura)%jogo.largura]= jogo.formaCarro[1][0];
-    linha2[(j+jogo.largura)%jogo.largura]= jogo.formaCarro[1][1];
-    linha2[(j+1+jogo.largura)%jogo.largura]= jogo.formaCarro[1][2];
+    linha2[(j-1+jogo.largura)%jogo.largura]= jogo.formaCarro[jogo.formaAtual][1][0];
+    linha2[(j+jogo.largura)%jogo.largura]= jogo.formaCarro[jogo.formaAtual][1][1];
+    linha2[(j+1+jogo.largura)%jogo.largura]= jogo.formaCarro[jogo.formaAtual][1][2];
 
     if (galinha){//tem galinha na pista
       linha1[jogo.galinha.posX-2]= jogo.galinha.forma[0][0];
