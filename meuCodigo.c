@@ -55,6 +55,7 @@ typedef struct {
 typedef struct {
   tPista pista[12];
   int qtdPista;
+  int pistaAtual;
   int largura;
   tJogada jogada;
   int pontuacao;
@@ -368,6 +369,10 @@ tJogo ReailizarJogo (tJogo jogo, char * argv[]){
   jogo.estatistica.movOpostos=0;
   jogo.estatistica.movTotais=0;
 
+  //jogo.pistaAtual= jogo.qtdPista-1;
+  jogo.pista[jogo.qtdPista-1].countHeatMap=1; //pista inferior comeca com 
+
+
   //jogo.HeatMapMatriz[35][100]= {0};
 
   //ImprimeJogo(jogo);
@@ -388,9 +393,14 @@ tJogo ReailizarJogo (tJogo jogo, char * argv[]){
       //printf ("%c", jogo.jogada.digitada);
       //scanf("%c", &lixo);
       jogo= MoveGalinha (jogo, jogo.jogada); // adiciona 1 ponto se for pra frente
+      jogo.pista[jogo.galinha.pista].countHeatMap++;
+      //printf ("\n%d\n", jogo.galinha.pista);
       jogo= MovimentaCarros (jogo);
       jogo.colisao=VerificaColisao(jogo);
       if (jogo.colisao) { // se != de 0 entao colidiu
+        jogo.pista[jogo.galinha.pista].countHeatMap=-21; //galinha tem no maximo vinte vidas, nunca consegue se tornar positivo
+
+        jogo.pista[jogo.qtdPista-1].countHeatMap++; // voltou pro inicio
 
         if (jogo.qtdMortes==0){
           jogo.estatistica.morteMax= jogo.estatistica.alturaAtual;
@@ -403,6 +413,7 @@ tJogo ReailizarJogo (tJogo jogo, char * argv[]){
           jogo.estatistica.morteMin=  jogo.estatistica.alturaAtual;
           //printf ("Altura maxima que a galinha chegou: %d\n", jogo.estatistica.alturaAtual);
         }
+
 
         jogo.estatistica.alturaAtual=2;
 
@@ -464,7 +475,7 @@ tJogo MoveGalinha (tJogo jogo, tJogada jogada){
     jogo.estatistica.movTotais++;
     jogo.estatistica.alturaAtual += 3;
 
-    jogo.pista[jogo.galinha.pista].countHeatMap++;
+    //jogo.pistaAtual--;
     //printf ("%d\n", jogo.galinha.pista);
     //jogo.pontuacao++; //ganha 1 ponto se foi pra frente
   } else if (jogada.digitada=='s'){
@@ -473,7 +484,6 @@ tJogo MoveGalinha (tJogo jogo, tJogada jogada){
     jogo.estatistica.movOpostos++;
 
     //jogo.pista[(jogo.estatistica.alturaAtual-2)/3].countHeatMap++;
-    jogo.pista[jogo.galinha.pista].countHeatMap++;
     if (jogo.galinha.pista<jogo.qtdPista-1) { //nao esta na pista mais inferior
       jogo.galinha.pista++; //desce uma pista
       jogo.morte[jogo.qtdMortes].pista= jogo.galinha.pista+1;
@@ -481,7 +491,6 @@ tJogo MoveGalinha (tJogo jogo, tJogada jogada){
       jogo.estatistica.alturaAtual -= 3;
     } else {
       jogo.morte[jogo.qtdMortes].pista= jogo.galinha.pista;
-      jogo.pista[jogo.galinha.pista].countHeatMap++;
     }
   }
   jogo.morte[jogo.qtdMortes].y= jogo.morte[jogo.qtdMortes].pista*3 -2;
@@ -537,7 +546,7 @@ void ImprimeMapa (tJogo jogo){
   int i,j,k;
 
   ImprimeTopo (jogo);
-  for (i=0; i<jogo.qtdPista-1; i++) { //nao imprimo a pista da galinha
+  for (i=0; i<jogo.qtdPista-1; i++) { 
     if (i==jogo.galinha.pista) {
       ImprimePista(jogo, jogo.pista[i], 1); //tem galinha nessa pista
     } else {
@@ -789,8 +798,51 @@ void GerarMapaDeCalor (tJogo jogo, char * argv[]){
 
 
 void ImprimeHeat(FILE * arq, tJogo jogo){
-  int i=0;
-  for (i=0; i<jogo.qtdPista; i++){
-    printf ("%d", jogo.pista[i].countHeatMap);
+  int i, j, k;
+  int comprimento= jogo.qtdPista*3-1;
+  //printf ("%d\n", comprimento);
+
+  //preenchendo matriz;
+  for (i=0; i<comprimento; i++){
+    for (j=0; j<jogo.largura; j++){
+      jogo.HeatMapMatriz[i][j]=0;
+      //printf ("%2d ", jogo.HeatMapMatriz[i][j]);
+    }
+    //printf ("\n");
   }
+
+  k=jogo.qtdPista-1;
+  for (i=0; i<comprimento; i=i+3){
+    if (jogo.pista[k].countHeatMap<0) {
+      for (j = 0; j < jogo.largura; j++) {
+        jogo.HeatMapMatriz[i][j]=-1;
+        jogo.HeatMapMatriz[i+1][j]=-1;
+      }
+      //printf ("%d\n", k);
+      //printf ("%2d ", jogo.HeatMapMatriz[i][j]);
+    } else { //sem colisao
+      //printf ("%d\n", k);
+      jogo.HeatMapMatriz[i][jogo.galinha.posX-2]= jogo.pista[k].countHeatMap;
+      jogo.HeatMapMatriz[i][jogo.galinha.posX-1]= jogo.pista[k].countHeatMap;
+      jogo.HeatMapMatriz[i][jogo.galinha.posX]= jogo.pista[k].countHeatMap;
+  
+      jogo.HeatMapMatriz[i+1][jogo.galinha.posX-2]= jogo.pista[k].countHeatMap;
+      jogo.HeatMapMatriz[i+1][jogo.galinha.posX-1]= jogo.pista[k].countHeatMap;
+      jogo.HeatMapMatriz[i+1][jogo.galinha.posX]= jogo.pista[k].countHeatMap;
+    }
+    //printf ("\n");
+    k--;
+  }
+
+  for (i=comprimento-1; i>=0; i--){
+    for (j=0; j<jogo.largura; j++){
+      if (jogo.HeatMapMatriz[i][j] == -1) {
+        fprintf(arq, " * ");   // substitui -1 por *
+      } else {
+        fprintf(arq,"%2d ", jogo.HeatMapMatriz[i][j]);
+      }
+    }
+    fprintf (arq, "\n");
+  }
+
 }
